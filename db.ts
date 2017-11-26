@@ -1,105 +1,87 @@
 import { Injectable } from '@angular/core';
-import { Http } from '@angular/http';
-import 'rxjs/add/operator/map';
-import {SQLite,Dialogs} from 'ionic-native';
+import { SQLite } from 'ionic-native';
 
-/*
-  Generated class for the DB provider.
-
-  See https://angular.io/docs/ts/latest/guide/dependency-injection.html
-  for more info on providers and Angular 2 DI.
-*/
 @Injectable()
 export class DB {
 
-  private db;
-  private isConnectionExist:boolean = false;
+    private db;
+    public isConnectionExist: boolean = false;
+    public isAllTablesExist: boolean = false;
+    public availableTables = [];
 
-  constructor(public http: Http) {
-    this.initDBConnection();
-  }
+    constructor() { }
 
-  private initDBConnection():void {
-  	this.db = new SQLite();
-    this.db.openDatabase({
-    	name:'databaseName.db',
-    	location:'default'
-    }).then(
-    ()=>{
-    	this.isConnectionExist = true;
-    },
-    (err)=>{
-    	this.debug('Unable to open the database connection', err);
-    });
-  }
+    public connect(): Promise<Object> {
+        let result = {};
+        return new Promise((resolve, reject) => {
+            if (!this.isConnectionExist) {
+                this.db = new SQLite();
+                this.db.openDatabase({
+                    name: 'trofeo_solution.db',
+                    location: 'default'
+                }).then(() => {
+                    this.isConnectionExist = true;
+                    resolve(result);
+                }, (err) => {
+                    this.debug('Unable to open the database connection', err);
+                    reject(result);
+                });
+            } else {
+                resolve(result);
+            }
+        });
+    }
 
-  public select(sql, params):Promise<Array<Object>> {
-  	return new Promise((resolve, reject) => {  		
-  		this.db.executeSql(sql, params).then(
-  			(result)=>{  					
-  				resolve(result.rows.item);
-  			},
-  			(err)=>{
-  				this.debug('Select Query Error: '+sql, err)
-  				reject(err);
-  			});
-  	});
-  }
+    public get(sql, params): Promise<Array<Object>> {
+        return new Promise((resolve, reject) => {
+            this.db.executeSql(sql, params).then(
+                (result) => {
+                    let data = [];
+                    for(let i=0 ;i<result.rows.length; i++) {
+                        data.push(result.rows.item(i));
+                    }                    
+                    resolve(data);
+                },
+                (err) => {
+                    this.debug('Select Query Error: ' + sql, err)
+                    reject(err);
+                });
+        });
+    }
 
-  public insert(sql, params):Promise<Object> {
-  	return new Promise((resolve, reject)=>{
-  		this.db.executeSql(sql, params).then(
-  			(result)=>{  				
-  				resolve(result);
-  			},
-  			(err)=>{
-  				this.debug('Insert Query Error: '+sql, err)
-  				reject(err);
-  			}
-  		);
-  	});
-  }
-
-  public update(sql:string, params:any):Promise<Object> {
-  	return new Promise((resolve, reject)=>{
-  		this.db.executeSql(sql, params).then(
-  			(result)=>{
-  				resolve(result);
-  			},
-  			(err) => {
-  				this.debug('Update Query Error: '+sql, err)
-  				reject(err);
-  			}
-  		);
-  	});
-  }
-
-  public delete(sql:string, params:any):Promise<Object> {
-  	return new Promise((resolve, reject)=>{
-  		this.db.executeSql(sql, params).then(
-  			(result)=>{
-  				resolve(result);
-  			},
-  			(err) => {
-  				this.debug('delete Query Error: '+sql, err)
-  				reject(err);
-  			}
-  		);
-  	});
-  }
+    public save(sql, params): Promise<Object> {
+        return new Promise((resolve, reject) => {
+            this.db.executeSql(sql, params).then(
+                (result) => {
+                    let data = {};
+                    data['insertId'] = result.insertId;
+                    resolve(data);
+                },
+                (err) => {
+                    this.debug('Insert/Update Query Error: ' + sql, err)
+                    reject(err);
+                }
+            );
+        });
+    }
 
 
+    public delete(sql: string, params: any): Promise<Object> {
+        return new Promise((resolve, reject) => {
+            this.db.executeSql(sql, params).then(
+                (result) => {
+                    resolve(result);
+                },
+                (err) => {
+                    this.debug('delete Query Error: ' + sql, err)
+                    reject(err);
+                }
+            );
+        });
+    }
 
-
-
-
-  public debug(msg:string, err:any) {
-  	if(this.isConnectionExist) {
-  		alert(msg +' '+JSON.stringify(err));
-  	}
-  	else {
-  		console.log(msg+' '+JSON.stringify(err));
-  	}
-  }
+    public debug(msg: string, err: any) {
+        alert(msg + ' ' + JSON.stringify(err));
+    }
 
 }
